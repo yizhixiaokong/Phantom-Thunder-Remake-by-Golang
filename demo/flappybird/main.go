@@ -21,7 +21,13 @@ type StartScene struct {
 		btnPressed gfx.Tex2D
 		gui.Rect
 	}
-	bird, bg, ground engi.Entity
+	bird struct {
+		engi.Entity
+		f32.Vec2         //位置
+		vy       float32 //y方向速度
+		w, h     float32
+	}
+	bg, ground engi.Entity
 }
 
 func (sn *StartScene) Load() {
@@ -39,7 +45,7 @@ func (sn *StartScene) Load() {
 func (sn *StartScene) LoadGame() {
 	gsn := &GameScene{}
 	//调用GameScene声明的borrow方法，将当前帧的Entity传递给下一帧
-	gsn.borrow(sn.bird, sn.bg, sn.ground)
+	gsn.borrow(sn.bird.Entity, sn.bg, sn.ground)
 
 	// load game scene
 	/*
@@ -150,7 +156,7 @@ func (sn *StartScene) OnEnter(g *game.Game) {
 	//按理说这里不用自己设置循环的，不知道为啥引擎没设置
 	anim.Play("flying")
 
-	sn.bird = bird
+	sn.bird.Entity = bird
 
 }
 func (sn *StartScene) Update(dt float32) {

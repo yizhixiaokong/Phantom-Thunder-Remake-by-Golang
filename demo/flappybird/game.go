@@ -7,10 +7,32 @@ import (
 	"korok.io/korok/game"
 	"korok.io/korok/gfx"
 	"korok.io/korok/gui"
+	"korok.io/korok/hid/input"
 	"korok.io/korok/math/f32"
 )
 
+type StateEnum int
+
+/*
+	三种状态
+	Ready 准备状态，显示 Ready 菜单
+	Running 运行状态，鸟受候物理作用并隐藏菜单
+	Over 挂掉状态，显示失败菜单
+*/
+const (
+	Ready StateEnum = iota
+	Running
+	Over
+)
+
+// 定义重力加速度和点击冲量
+const (
+	Gravity    = 600
+	TapImpulse = 280
+)
+
 type GameScene struct {
+	state StateEnum //添加游戏状态属性，默认是Ready状态
 	ready struct {
 		gfx.Tex2D
 		gui.Rect
@@ -19,7 +41,13 @@ type GameScene struct {
 		gfx.Tex2D
 		gui.Rect
 	}
-	bird, bg, ground engi.Entity
+	bird struct {
+		engi.Entity
+		f32.Vec2         //位置
+		vy       float32 //y方向速度
+		w, h     float32
+	}
+	bg, ground engi.Entity
 }
 
 /*
@@ -55,14 +83,35 @@ func (sn *GameScene) OnEnter(g *game.Game) {
 		H: 123, // 246
 	}
 	// 重新调整鸟的位置
-	korok.Transform.Comp(sn.bird).SetPosition(f32.Vec2{80, 240})
+	sn.bird.Vec2 = f32.Vec2{80, 240}
+	korok.Transform.Comp(sn.bird.Entity).SetPosition(sn.bird.Vec2)
 }
 func (sn *GameScene) Update(dt float32) {
-	// show ready
-	gui.Image(1, sn.ready.Rect, sn.ready.Tex2D, nil)
+	/*
+		根据游戏状态属性的不同来管理生命周期
+	*/
+	if st := sn.state; st == Ready {
+		sn.showReady(dt)
+		return
+	} else if st == Over {
+		sn.showOver(dt)
+		return
+	}
 
-	// show tap hint
-	gui.Image(2, sn.tap.Rect, sn.tap.Tex2D, nil)
+	//Running状态
+
+	// 检测屏幕点击，每次点击给鸟施加一次冲量
+	if input.PointerButton(0).JustPressed() {
+		sn.bird.vy = TapImpulse //冲量等于质量*速度 , 这里由于没有设定质量，所以可以直接将冲量换算成速度
+	}
+	// 模拟物理加速
+	sn.bird.vy -= Gravity * dt         //模拟重力加速度对速度的影响
+	sn.bird.Vec2[1] += sn.bird.vy * dt //根据速度改变鸟的位置
+
+	// update bird position
+	b := korok.Transform.Comp(sn.bird.Entity)
+	b.SetPosition(sn.bird.Vec2)
+
 }
 func (sn *GameScene) OnExit() {
 	/*
@@ -77,5 +126,25 @@ func (sn *GameScene) OnExit() {
 	将之前的Entity传递给当前帧(当前场景)
 */
 func (sn *GameScene) borrow(bird, bg, ground engi.Entity) {
-	sn.bird, sn.bg, sn.ground = bird, bg, ground
+	sn.bird.Entity, sn.bg, sn.ground = bird, bg, ground
+}
+
+func (sn *GameScene) showReady(dt float32) {
+	// show ready
+	gui.Image(1, sn.ready.Rect, sn.ready.Tex2D, nil)
+
+	// show tap hint
+	gui.Image(2, sn.tap.Rect, sn.tap.Tex2D, nil)
+
+	/*
+		通过用户输入系统来获取点击事件，
+		检测屏幕点击事件
+		改变游戏状态属性
+	*/
+	if input.PointerButton(0).JustPressed() {
+		sn.state = Running
+	}
+}
+func (sn *GameScene) showOver(dt float32) {
+	//gameover
 }
