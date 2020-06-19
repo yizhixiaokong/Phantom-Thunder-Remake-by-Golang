@@ -21,13 +21,18 @@ type StartScene struct {
 		btnPressed gfx.Tex2D
 		gui.Rect
 	}
-	bird struct {
+	bird struct { //鸟
 		engi.Entity
 		f32.Vec2         //位置
 		vy       float32 //y方向速度
 		w, h     float32
 	}
-	bg, ground engi.Entity
+	ground struct { //地面
+		engi.Entity
+		f32.Vec2
+		vx float32
+	}
+	bg engi.Entity
 }
 
 func (sn *StartScene) Load() {
@@ -45,7 +50,7 @@ func (sn *StartScene) Load() {
 func (sn *StartScene) LoadGame() {
 	gsn := &GameScene{}
 	//调用GameScene声明的borrow方法，将当前帧的Entity传递给下一帧
-	gsn.borrow(sn.bird.Entity, sn.bg, sn.ground)
+	gsn.borrow(sn.bird.Entity, sn.bg, sn.ground.Entity)
 
 	// load game scene
 	/*
@@ -93,7 +98,7 @@ func (sn *StartScene) OnEnter(g *game.Game) {
 		spr.SetZOrder(1)
 		xf := korok.Transform.NewComp(entity)
 		xf.SetPosition(f32.Vec2{0, 100})
-		sn.ground = entity
+		sn.ground.Entity = entity
 	}
 	// setup gui
 	/*
